@@ -26,7 +26,12 @@ import json
 
 if sys.version_info < (3,):
 	from .exception import Exception as MozException
-	from .type import Object, Function, Array
+
+from my_type.my_function import Function
+from my_type.my_object import Object
+from my_type.my_array import Array
+from my_type.my_raw import Raw
+from my_type.my_util import convertToJs
 
 
 class Mozrepl(object):
@@ -248,6 +253,13 @@ class Mozrepl(object):
 
 	def currentURL(self):
 		res = self.execute('{document}.location.href'.format(document=self.document))
+		return(res)
+
+
+	def readHTML(self,mode='html'):
+		if mode=='body': mode ="body"
+		if mode=='html': mode ="documentElement"
+		res = self.execute('{document}.{mode}.innerHTML'.format(document=self.document,mode=mode))
 		return(res)
 
 	def waitLoad(self):
