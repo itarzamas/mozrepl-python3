@@ -93,7 +93,7 @@ class Object(object):
 		buffer = '{item} in {reference};'.format(item=convertToJs(item), reference=self)
 		return self._repl.execute(buffer)
 	
-	def __getattr__(self, name):
+	def __getattr__(self, name):		
 		return self[name]
 	
 	def __setattr__(self, name, value):
@@ -144,13 +144,13 @@ class Object(object):
 			reference = self,
 			baseVar = self._repl._baseVarname
 			)
-		print(buffer)
 		return self._repl.execute(buffer)
 	
 	def __getitem__(self, key):
 		key = convertToJs(key)
 		buffer = '{reference}[{key}]'.format(reference=self, key=key)
 		item = self._repl.execute(buffer)
+		print(buffer)
 		if isinstance(item, Function):
 			buffer = '{reference}[{key}].bind({reference})'.format(reference=self, key=key)
 			item = self._repl.execute(buffer)

@@ -11,8 +11,8 @@ class _JsonEncoder(json.JSONEncoder):
 		super(_JsonEncoder, self).__init__(*args, **kwargs)
 		
 		# from .type import Raw, Object
-		from my_type.my_object import Object
-		from my_type.my_raw import Raw
+		from .my_object import Object
+		from .my_raw import Raw
 		self.types = {
 			'Raw': Raw,
 			'Object': Object

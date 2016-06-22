@@ -27,11 +27,12 @@ import json
 if sys.version_info < (3,):
 	from .exception import Exception as MozException
 
-from my_type.my_function import Function
-from my_type.my_object import Object
-from my_type.my_array import Array
-from my_type.my_raw import Raw
-from my_type.my_util import convertToJs
+from .my_type.my_function import Function
+from .my_type.my_object import Object
+from .my_type.my_array import Array
+from .my_type.my_raw import Raw
+from .my_type.my_util import convertToJs
+from .my_type.my_exception import Exception as MozException
 
 
 class Mozrepl(object):
@@ -54,13 +55,13 @@ class Mozrepl(object):
 	# DEFAULT_HOST = '192.168.1.30'
 	DEFAULT_PORT = 4242
 
-	def __init__(self, port=DEFAULT_PORT, host=DEFAULT_HOST, log=False):
+	def __init__(self, port=DEFAULT_PORT, host=DEFAULT_HOST, log_enable=False):
 		"""
 		mozrepl Firefox Add-on And connect.
 		"""
 		self._isConnected = False
 		self.connect(port, host)
-		self.log = log
+		self.log = log_enable
 		self.document = 'window.content.top.document'
 
 		self._baseVarname = '__pymozrepl_{uuid}'.format(uuid=uuid.uuid4().hex)
@@ -113,7 +114,7 @@ class Mozrepl(object):
 	def __exit__(self, type, value, traceback):
 		del self
 
-	def _rawExecute(self, command):
+	def _rawExecute(self, command,timeout=60 ): 
 		"""
 		Execute the command.
         
@@ -124,6 +125,7 @@ class Mozrepl(object):
          : return: Firefox MozREPL received a string summarizing the string returned by the Add-on.
          : return: return None if there is no response from the Firefox MozREPL Add-on.
          : rtype: unicode
+	:timeout in seconds
 		"""
 		# Forwarding
 		buffer = """try {{ {command}; }} catch (e) {{ (function() {{ let robj = {{ 'exception': {{}} }}; Object.getOwnPropertyNames(e).forEach(function (key) {{ robj.exception[key] = e[key]; }}, e); let buffer = JSON.stringify(robj); buffer = window.btoa(unescape(encodeURIComponent(buffer))); return buffer; }}()) }};""".format(
@@ -137,11 +139,10 @@ class Mozrepl(object):
 		buffer = buffer.encode('UTF-8')
 		self._telnet.write(buffer)
 
-		respon = self._telnet.read_until(self.prompt, 1 * 60)  # recive
+		respon = self._telnet.read_until(self.prompt, timeout)  # recive
 		# If the response is present to remove unwanted strings in received response string.
-		respon = re.sub(b' (\.+>)*', b'', respon)  # remover los ...>
-		respon = re.sub(self.prompt, b'', respon, re.UNICODE)  # remove promp
-		respon = re.sub(b'\n', b'', respon, re.UNICODE)  # remove \n
+		respon = re.sub(b'^ (\.+> )*', b'', respon)  # remover los " ...>""
+		respon = re.sub(b'(\n)?'+self.prompt, b'', respon, re.UNICODE)  # remove "\nrepl{x}>"
 
 		# Returns None if there is no response
 		if not respon:
@@ -259,7 +260,7 @@ class Mozrepl(object):
 	def readHTML(self,mode='html'):
 		if mode=='body': mode ="body"
 		if mode=='html': mode ="documentElement"
-		res = self.execute('{document}.{mode}.innerHTML'.format(document=self.document,mode=mode))
+		res = self.execute('{document}.{mode}.innerHTML'.format(document=self.document,mode=mode))		
 		return(res)
 
 	def waitLoad(self):
