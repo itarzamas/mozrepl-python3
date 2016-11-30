@@ -8,19 +8,20 @@
 # def _rawExecute(self, command , log): borrar el log
 # function_null??? dejar?
 
-import sys
-import os
-import random
-import time
-import re
-import telnetlib
-import uuid
-import urllib.parse
-import urllib.request
-import urllib.parse
-import urllib.error
 import base64
 import json
+import os
+import random
+import re
+import sys
+import telnetlib
+import time
+import urllib.error
+import urllib.parse
+import urllib.parse
+import urllib.request
+import uuid
+from datetime import datetime
 #from ufp.terminal.debug import print_ as debug
 
 
@@ -63,6 +64,7 @@ class Mozrepl(object):
 		self.connect(port, host)
 		self.log = log_enable
 		self.document = 'window.content.top.document'
+		self.timeout_waitload = 60 #esperar 60 segundos
 
 		self._baseVarname = '__pymozrepl_{uuid}'.format(uuid=uuid.uuid4().hex)
 
@@ -137,12 +139,22 @@ class Mozrepl(object):
 			print(str(buffer), '\n')  # , 'lo que envio;'
 
 		buffer = buffer.encode('UTF-8')
-		self._telnet.write(buffer)
+		try:
+			self._telnet.write(buffer)
+			respon = self._telnet.read_until(self.prompt, timeout)  # recive
+		except:
+			respon=b''
+			print(buffer,'error telnet null')
 
-		respon = self._telnet.read_until(self.prompt, timeout)  # recive
-		# If the response is present to remove unwanted strings in received response string.
-		respon = re.sub(b'^ (\.+> )*', b'', respon)  # remover los " ...>""
-		respon = re.sub(b'(\n)?'+self.prompt, b'', respon, re.UNICODE)  # remove "\nrepl{x}>"
+		
+		if respon :
+			# If the response is present to remove unwanted strings in received response string.
+			respon = re.sub(b'^ (\.+> )*', b'', respon)  # remover los " ...>""
+			respon = re.sub(b'(\n)?'+self.prompt, b'', respon, re.UNICODE)  # remove "\nrepl{x}>"
+		else:
+			respon=b'' #if the Object is Null
+			print('object null')
+
 
 		# Returns None if there is no response
 		if not respon:
@@ -203,7 +215,7 @@ class Mozrepl(object):
 		
 		# porque se pasaba antes en base64?? 
 		# buffer = """(function(){{ let robj = {{}}; let lastCmdValue = {content} ; robj.type = typeof lastCmdValue; if ( robj.type == 'object' || robj.type == 'function' ) {{ if ( robj.type == 'object' && Array.isArray(lastCmdValue) ) {{ robj.type = 'array'; }}; {baseVar}.ref['{refUuid}'] = lastCmdValue; robj.refUuid = '{refUuid}'; }} else {{ robj.value = lastCmdValue; }}; var buffer = JSON.stringify(robj); buffer = {baseVar}.modules.base64.encode(buffer, 'utf-8'); return buffer; }}());""".format(			
-		buffer = """(function(){{ let robj = {{}}; let lastCmdValue = {content} ; robj.type = typeof lastCmdValue; if ( robj.type == 'object' || robj.type == 'function' ) {{ if ( robj.type == 'object' && Array.isArray(lastCmdValue) ) {{ robj.type = 'array'; }}; {baseVar}.ref['{refUuid}'] = lastCmdValue; robj.refUuid = '{refUuid}'; }} else {{ robj.value = lastCmdValue; }}; var buffer = JSON.stringify(robj); return buffer; }}());""".format(			
+		buffer = """(function(){{ let robj = {{}}; let lastCmdValue = {content} ; robj.type = typeof lastCmdValue; if (lastCmdValue == null) {{return null;}}; if ( robj.type == 'object' || robj.type == 'function' ) {{ if ( robj.type == 'object' && Array.isArray(lastCmdValue) ) {{ robj.type = 'array'; }}; {baseVar}.ref['{refUuid}'] = lastCmdValue; robj.refUuid = '{refUuid}'; }} else {{ robj.value = lastCmdValue; }}; var buffer = JSON.stringify(robj); return buffer; }}());""".format(			
 			baseVar = self._baseVarname,
 			refUuid = uuid.uuid4(),
 			content = command
@@ -244,6 +256,7 @@ class Mozrepl(object):
 		return None
 
 	def xpath(self, path):
+		# ORDERED_NODE_ITERATOR_TYPE
 		return(self.execute('{document}.evaluate("{path}", {document}, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'.format(document=self.document, path=path.replace('"', '\\"'))))
 
 	def openUrl(self, url, wait=True):
@@ -265,7 +278,7 @@ class Mozrepl(object):
 
 	def waitLoad(self):
 		# espera maximo 2 min a que cargue
-		for i in range(10 * 60):
+		for i in range(10 * self.timeout_waitload):
 			if self.execute("window.getBrowser().webProgress.isLoadingDocument") == False:
 				break
 			print('.', end='')
@@ -288,48 +301,76 @@ class Mozrepl(object):
 		return (self.execute("gBrowser.tabContainer.selectedIndex = {};".format(vTab)))
 		# .advanceSelectedTab( -1, true ) = prev
 
-	def getElement(self, sElement, sMode='id', iIndex=0):
+	def getElement(self, sElement, sMode='id', iIndex=0,wait=False):
+		
+		startTime = datetime.now()
 		sMode = sMode.lower()
-		if sMode == "elements":
-			if sElement[:-7] == "OBJECT|":
-				sElement = sElement[8]
-		if sMode == "id":
-			sElement = "{document}.getElementById('{sElement}')".format(document=self.document, sElement=sElement, iIndex=iIndex)
-		if sMode == "name":
-			sElement = "{document}.getElementsByName('{sElement}')[{iIndex}]".format(document=self.document, sElement=sElement, iIndex=iIndex)
-		if sMode == "class":
-			sElement = "{document}.getElementsByClassName('{sElement}')[{iIndex}]".format(document=self.document, sElement=sElement, iIndex=iIndex)
-		if sMode == "tag":
-			sElement = "{document}.getElementsByTagName('{sElement}')[{iIndex}]".format(document=self.document, sElement=sElement, iIndex=iIndex)
-		if sMode == "xpath":
-			return (self.xpath(sElement))
-		# if sMode == Else
-		# 	???
-		return (self.execute(sElement))
+		res = None
+		while 1:
+			if sMode == "xpath":
+				res = self.xpath(sElement)
+			else:
+				if sMode == "elements":
+					if sElement[:-7] == "OBJECT|":
+						sElement = sElement[8]
+				elif sMode == "id":
+					sElement = "{document}.getElementById('{sElement}')".format(document=self.document, sElement=sElement, iIndex=iIndex)
+				elif sMode == "name":
+					sElement = "{document}.getElementsByName('{sElement}')[{iIndex}]".format(document=self.document, sElement=sElement, iIndex=iIndex)
+				elif sMode == "class":
+					#esto retorna una tupula formaro (1,val1),(2,val2)
+					sElement = "{document}.getElementsByClassName('{sElement}')".format(document=self.document, sElement=sElement)
+				elif sMode == "tag":
+					sElement = "{document}.getElementsByTagName('{sElement}')[{iIndex}]".format(document=self.document, sElement=sElement, iIndex=iIndex)
+				# if sMode == Else
+				# 	???
+				res =self.execute(sElement)
+
+			if res or not wait or  (wait and (datetime.now() - startTime).total_seconds() >= self.timeout_waitload):
+				break
+
+			time.sleep(0.02)
+		return (res)
 
 	def back(self, wait=True):
 		if wait:
 			self.waitLoad()
 		return (self.execute("gBrowser.goBack()"))
 
+	def waitGetForElement(self, element,  wait=True):
+
+		for i in range(10 * self.timeout_waitload):
+			if element:
+				return 1
+			time.sleep(0.1)
+
 
 class FunctionNull():
 	# def __init__(self, repl, uuid):
 	# super(FunctionNull, self).__init__(repl, uuid)
 
-	# def __repr__(self):
+	def __repr__(self):
+		return None
 		# return 'function() {...}'
 
 	def __str__(self):
+		# print('str--')
 		return ''
 
 	def __call__(self, *args):
-		print('-------', args)
-		return ''
+		# print('FunctionNull.__call__', args)
+		return None
 
 	def __getattribute__(self, key):
-		print('+++++++++++', key)
-		return ''
+		# print('FunctionNull.__getattribute__', key)
+		return None
+
+	def __eq__(self, other):
+		return None == other
+
+	def __bool__(self):
+		return False
+
 
 	# def __del__(self):
 	# 	buffer = 'delete {reference}; null;'.format(reference=self)

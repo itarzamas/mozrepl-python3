@@ -50,13 +50,13 @@ class Object(object):
 		>>> for key, value in a: # __iter__
 		...
 	"""
-	def __init__(self, repl, uuid):
+	def __init__(self, repl, uuid):	
 		self.__dict__['_repl'] = repl
 		self.__dict__['_uuid'] = uuid
 		# print('\n EMPIEZA >','-',repl,'-',uuid)
 	
 	@classmethod
-	def makeNotinited(cls, repl):
+	def makeNotinited(cls, repl):	
 		"""
 		초기화되지 않은 참조 오브젝트를 얻습니다.
 		
@@ -68,7 +68,7 @@ class Object(object):
 		buffer= str(uuid.uuid4())
 		return cls(repl, buffer)
 	
-	def __str__(self):
+	def __str__(self):	
 		"""
 		자바스크립트에서 이 오브젝트에 대한 참조값.
 		
@@ -84,30 +84,31 @@ class Object(object):
 			>>> repl.execute('var value = {reference}'.format(reference=obj))
 		"""
 		return '{baseVar}.ref["{uuid}"]'.format(baseVar=self._repl._baseVarname, uuid=self._uuid)
-	
-	def __eq__(self, other):
+
+	def __eq__(self, other):	
 		buffer = '{other} == {reference};'.format(other=convertToJs(other), reference=self)
 		return self._repl.execute(buffer)
-	
-	def __contains__(self, item):
+
+	def __contains__(self, item):	
 		buffer = '{item} in {reference};'.format(item=convertToJs(item), reference=self)
 		return self._repl.execute(buffer)
-	
-	def __getattr__(self, name):		
+
+	def __getattr__(self, name):			
 		return self[name]
 	
-	def __setattr__(self, name, value):
+	def __setattr__(self, name, value):	
 		self[name] = repr(value)
-	
-	def __delattr__(self, name):
+
+	def __delattr__(self, name):	
 		del self[name]
-	
-	def __iter__(self):
+
+	def __iter__(self):	
 		"""
 		iterador para acceder al objeto javascript.
 
 		: Rendimiento: valor; Si usted __iterator__ 'existe la propiedad en el objeto, se utiliza un iterador para realizar la tarea.
 		: Rendimiento: A menos iteradores definidos de otro modo, (valor clave, pares) para aprobar.
+		print('nidos de otro modo, (valor clave, pares) para aprobar.')
 		"""
 		buffer = """(function(reference){{ var processValue = function(value){{ var type = typeof value; if ( type == 'object' || type == 'function' ) {{ if ( type == 'object' && Array.isArray(value) ) {{ type = 'array'; }}; var uuid = {baseVar}.modules.uuid.uuid(); {baseVar}.ref[uuid] = value; return {{ 'uuid' : uuid.toString(), 'type' : type }}; }}; return {{ 'value' : value }}; }}; let iter; if ( '__iterator__' in reference ) {{ iter = function* (){{ for (let value in Iterator(reference)) {{ let robj = [ processValue(value) ]; yield JSON.stringify(robj); }}; }}; }} else {{ iter = function* (){{ for (let [key, value] in Iterator(reference)) {{ let robj = [ processValue(key), processValue(value) ]; yield JSON.stringify(robj); }}; }}; }}; return {{ 'iter': iter(), 'next': function(){{ let buffer = this.iter.next(); if ( buffer.done ) {{ throw {{ 'name': 'StopIteration' }}; }}; return buffer.value; }} }}; }}({reference}));""".format(
 			reference = self,
@@ -115,12 +116,15 @@ class Object(object):
 			)
 		iter = self._repl.execute(buffer)
 		while True:
-			try:
-				robj = self._repl.execute('{iter}.next();'.format(iter=iter))
-			except MozException as e:
-				if 'name' in e and e.name == 'StopIteration':
-					raise StopIteration
-				raise e
+			# try:
+			# 	robj = self._repl.execute('{iter}.next();'.format(iter=iter))
+			# except MozException as e:
+			# 	if 'name' in e and e.name == 'StopIteration':
+			# 		raise StopIteration
+			# 	raise e
+			robj = self._repl.execute('{iter}.next();'.format(iter=iter))
+			if not robj:
+				raise StopIteration
 			items = list()
 			robj = json.loads(robj, strict=False)
 			for item in robj:
@@ -138,7 +142,7 @@ class Object(object):
 			else:
 				yield tuple(items)
 		pass
-	
+
 	def __repr__(self):
 		buffer = """{baseVar}.modules.represent({reference});""".format(
 			reference = self,
@@ -150,30 +154,27 @@ class Object(object):
 		key = convertToJs(key)
 		buffer = '{reference}[{key}]'.format(reference=self, key=key)
 		item = self._repl.execute(buffer)
-		print(buffer)
+		# print(buffer)
 		if isinstance(item, Function):
 			buffer = '{reference}[{key}].bind({reference})'.format(reference=self, key=key)
 			item = self._repl.execute(buffer)
 		return item
-	
+
 	def __setitem__(self, key, value):
 		buffer = '{reference}[{key}] = {value}; null;'.format(reference=self, key=convertToJs(key), value=value)
 		self._repl._rawExecute(buffer)
-	
+
 	def __delitem__(self, key):
 		buffer = 'delete {reference}[{key}]; null;'.format(reference=self, key=convertToJs(key))
 		self._repl._rawExecute(buffer)
-	
+
 	def __del__(self):
 		buffer = 'delete {reference}; null;'.format(reference=self)
 		self._repl._rawExecute(buffer)
-	
-	# def click(self):
-	# 	print('quesos')
-		# buffer='FFau3=new Object();FFau3.tmp="";FFau3.obj=null;FFau3.WCD=window.content.top.document;'
-		# self._repl._rawExecute(buffer)
-		# self._repl._rawExecute('FFau3.simulateEvent=function simulateEvent(a,b,c){try{var d=document.createEvent(b);switch(b){case"MouseEvents":d.initMouseEvent(c,true,true,window,0,0,0,simulateEvent.arguments[4],simulateEvent.arguments[5],false,false,false,false,0,null);break;case"KeyboardEvent":d.initKeyEvent(c,true,true,null,false,false,false,false,simulateEvent.arguments[3],0);break;case"Event":d.initEvent(c,true,true);break}a.dispatchEvent(d);return 1}catch(e){return-3}return 0};')
-		# self._repl._rawExecute('try{FFau3.simulateEvent({},"MouseEvents","click");}catch(e){"_FFCmd_Err";};'.format(self) )
+
+	def click_wait(self):
+		self.click()
+		self.waitLoad()
 
 from .my_array import Array
 from .my_function import Function
