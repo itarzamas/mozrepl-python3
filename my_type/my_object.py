@@ -154,7 +154,6 @@ class Object(object):
 		key = convertToJs(key)
 		buffer = '{reference}[{key}]'.format(reference=self, key=key)
 		item = self._repl.execute(buffer)
-		# print(buffer)
 		if isinstance(item, Function):
 			buffer = '{reference}[{key}].bind({reference})'.format(reference=self, key=key)
 			item = self._repl.execute(buffer)
