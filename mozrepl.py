@@ -6,7 +6,7 @@
 # llamada al self.execute repetida?
 # dataURL.replace("data:image/png;base64,","");para todos
 # def _rawExecute(self, command , log): borrar el log
-# function_null??? dejar?
+# function_null??? dejar?, pero agregar exceptions
 
 import base64
 import json
