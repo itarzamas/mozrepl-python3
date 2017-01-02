@@ -37,7 +37,7 @@ from .my_type.my_exception import Exception as MozException
 
 class Mozrepl(object):
     """
-	The class that provides an interface for Firefox MozREPL Add-on.
+    The class that provides an interface for Firefox MozREPL Add-on.
     
     It supports the with statement.
     
@@ -48,7 +48,7 @@ class Mozrepl(object):
      : type port: int
      : param host: mozrepl Firefox Add-on hosts in.
      : type host: unicode
-	"""
+    """
 
     _RE_PROMPT = re.compile(br'^repl\d*>', re.MULTILINE)
     DEFAULT_HOST = '127.0.0.1'
@@ -57,13 +57,13 @@ class Mozrepl(object):
 
     def __init__(self, port=DEFAULT_PORT, host=DEFAULT_HOST, log_enable=False):
         """
-		mozrepl Firefox Add-on And connect.
-		"""
+        mozrepl Firefox Add-on And connect.
+        """
         self._isConnected = False
         self.connect(port, host)
         self.log = log_enable
         self.document = 'window.content.top.document'
-        self.timeout_waitload = 60  #esperar 60 segundos
+        self.timeout_waitload = 60  # esperar 60 segundos
 
         self._baseVarname = '__pymozrepl_{uuid}'.format(uuid=uuid.uuid4().hex)
 
@@ -73,13 +73,13 @@ class Mozrepl(object):
 
     def connect(self, port=None, host=None):
         """
-		Connect with mozrepl Firefox Add-on.
+        Connect with mozrepl Firefox Add-on.
         
          The connection associated with the destination must be the same as the first target.
         
          : param port: mozrepl Firefox Add-on port of. If omitted, it uses the existing value.
          : param port: mozrepl Firefox Add-on hosts in. If omitted, it uses the existing value.
-		"""
+        """
         if port is not None:
             self.port = port
 
@@ -99,10 +99,10 @@ class Mozrepl(object):
 
     def disconnect(self):
         """
-		and Disconnects mozrepl Firefox Add-on temporarily.
+        and Disconnects mozrepl Firefox Add-on temporarily.
         
          To clear up the status stored on the server, you must delete this object.
-		"""
+        """
         # If not connected, and not go through the disconnection process.
         if not self._isConnected:
             return
@@ -117,7 +117,7 @@ class Mozrepl(object):
 
     def _rawExecute(self, command, timeout=60):
         """
-		Execute the command.
+        Execute the command.
         
          without analyzing the command Unlike the execute method returns a string literally been returning from a Firefox MozREPL Add-on.
         
@@ -126,9 +126,10 @@ class Mozrepl(object):
          : return: Firefox MozREPL received a string summarizing the string returned by the Add-on.
          : return: return None if there is no response from the Firefox MozREPL Add-on.
          : rtype: unicode
-	:timeout in seconds
-		"""
+    :timeout in seconds
+        """
         # Forwarding
+        command = command[:-1] if command[-1] == ';' else command
         buffer = """try {{ {command}; }} catch (e) {{ (function() {{ let robj = {{ 'exception': {{}} }}; Object.getOwnPropertyNames(e).forEach(function (key) {{ robj.exception[key] = e[key]; }}, e); let buffer = JSON.stringify(robj); buffer = window.btoa(unescape(encodeURIComponent(buffer))); return buffer; }}()) }};""".format(
             command=command, baseVar=self._baseVarname)
 
@@ -150,7 +151,7 @@ class Mozrepl(object):
             respon = re.sub(b'(\n)?' + self.prompt, b'', respon,
                             re.UNICODE)  # remove "\nrepl{x}>"
         else:
-            respon = b''  #if the Object is Null
+            respon = b''  # if the Object is Null
             print('object null')
 
         # Returns None if there is no response
@@ -194,7 +195,7 @@ class Mozrepl(object):
 
     def execute(self, command):
         """
-		Execute the command.
+        Execute the command.
         
         .. Attention :: When using the method of the object, 'repl.execute ("repl.home") ()' can not be used immediately after being returned as a function of the method. To use in this manner, give the object passes the call explicitly, as shown in 'repl.execute ("repl.home.call") (Raw ("repl"))', 'repl.execute ("repl"). Use the automatic binding function of pymozrepl as home () '.
         .. Attention :: pymozrepl one object has a separate single context. Please note that this context is different from the current context is provided in Firefox mozrepl.
@@ -210,20 +211,21 @@ class Mozrepl(object):
         : Returns: default, such as string, number, bool Returns else is converted to an appropriate basic type in the corresponding python (int, bool, unicode, etc.).
         """
 
-        # porque se pasaba antes en base64?? 
-        # buffer = """(function(){{ let robj = {{}}; let lastCmdValue = {content} ; robj.type = typeof lastCmdValue; if ( robj.type == 'object' || robj.type == 'function' ) {{ if ( robj.type == 'object' && Array.isArray(lastCmdValue) ) {{ robj.type = 'array'; }}; {baseVar}.ref['{refUuid}'] = lastCmdValue; robj.refUuid = '{refUuid}'; }} else {{ robj.value = lastCmdValue; }}; var buffer = JSON.stringify(robj); buffer = {baseVar}.modules.base64.encode(buffer, 'utf-8'); return buffer; }}());""".format(			
+        # porque se pasaba antes en base64??
+        # buffer = """(function(){{ let robj = {{}}; let lastCmdValue = {content} ; robj.type = typeof lastCmdValue; if ( robj.type == 'object' || robj.type == 'function' ) {{ if ( robj.type == 'object' && Array.isArray(lastCmdValue) ) {{ robj.type = 'array'; }}; {baseVar}.ref['{refUuid}'] = lastCmdValue; robj.refUuid = '{refUuid}'; }} else {{ robj.value = lastCmdValue; }}; var buffer = JSON.stringify(robj); buffer = {baseVar}.modules.base64.encode(buffer, 'utf-8'); return buffer; }}());""".format(
         buffer = """(function(){{ let robj = {{}}; let lastCmdValue = {content} ; robj.type = typeof lastCmdValue; if (lastCmdValue == null) {{return null;}}; if ( robj.type == 'object' || robj.type == 'function' ) {{ if ( robj.type == 'object' && Array.isArray(lastCmdValue) ) {{ robj.type = 'array'; }}; {baseVar}.ref['{refUuid}'] = lastCmdValue; robj.refUuid = '{refUuid}'; }} else {{ robj.value = lastCmdValue; }}; var buffer = JSON.stringify(robj); return buffer; }}());""".format(
             baseVar=self._baseVarname, refUuid=uuid.uuid4(), content=command)
 
         respon = self._rawExecute(buffer)
 
-        # 응답받은 결과가 없으면 그대로 반환
+        # Si no hay respuesta que recibió como resultado Return
         if respon is None:
             # return FunctionNull(self, 'no existe item')
             return FunctionNull()
             return None
 
-        if self.log: print('//', respon, 'ok ;')
+        if self.log:
+            print('//', respon, 'ok ;')
 
         # function
         if respon['type'] == 'function':
@@ -244,21 +246,24 @@ class Mozrepl(object):
         if 'value' in respon:
             return respon['value']
 
+        print('tipo ', respon['type'])
+
         return FunctionNull()
         # return FunctionNull(self, 'no existe funcion')
         return None
 
     def xpath(self, path, index):
+        path = path.replace('"', '\\"')
         if index == 0:
             return (self.execute(
                 '{document}.evaluate("{path}", {document}, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'.
                 format(
-                    document=self.document, path=path.replace('"', '\\"'))))
+                    document=self.document, path=path)))
 
         res = self.execute(
             '{document}.evaluate("{path}", {document}, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)'.
             format(
-                document=self.document, path=path.replace('"', '\\"')))
+                document=self.document, path=path))
         if res and res.snapshotLength:
             if index == -1:
                 res = [
@@ -282,8 +287,10 @@ class Mozrepl(object):
         return (res)
 
     def readHTML(self, mode='html'):
-        if mode == 'body': mode = "body"
-        if mode == 'html': mode = "documentElement"
+        if mode == 'body':
+            mode = "body"
+        if mode == 'html':
+            mode = "documentElement"
         res = self.execute('{document}.{mode}.innerHTML'.format(
             document=self.document, mode=mode))
         return (res)
@@ -334,14 +341,14 @@ class Mozrepl(object):
                     sElement = "{document}.getElementsByName('{sElement}')[{index}]".format(
                         document=self.document, sElement=sElement, index=index)
                 elif sMode == "class":
-                    #esto retorna una tupula formaro (1,val1),(2,val2)
+                    # esto retorna una tupula formaro (1,val1),(2,val2)
                     sElement = "{document}.getElementsByClassName('{sElement}')".format(
                         document=self.document, sElement=sElement)
                 elif sMode == "tag":
                     sElement = "{document}.getElementsByTagName('{sElement}')[{index}]".format(
                         document=self.document, sElement=sElement, index=index)
                 # if sMode == Else
-                # 	???
+                #   ???
                 res = self.execute(sElement)
 
             if res or not wait or (wait and
@@ -358,7 +365,6 @@ class Mozrepl(object):
         return (self.execute("gBrowser.goBack()"))
 
     def waitGetForElement(self, element, wait=True):
-
         for i in range(10 * self.timeout_waitload):
             if element:
                 return 1
@@ -392,5 +398,5 @@ class FunctionNull():
         return False
 
     # def __del__(self):
-    # 	buffer = 'delete {reference}; null;'.format(reference=self)
-    # 	self._repl._rawExecute(buffer)
+    #   buffer = 'delete {reference}; null;'.format(reference=self)
+    #   self._repl._rawExecute(buffer)
