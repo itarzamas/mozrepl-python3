@@ -29,7 +29,7 @@ if sys.version_info < (3, ):
 
 from .my_type.my_function import Function
 from .my_type.my_object import Object
-from .my_type.my_array import Array
+from .my_type.my_array import Array, Snapshot
 from .my_type.my_raw import Raw
 from .my_type.my_util import convertToJs
 from .my_type.my_exception import Exception as MozException
@@ -265,14 +265,17 @@ class Mozrepl(object):
             format(
                 document=self.document, path=path))
         if res and res.snapshotLength:
-            if index == -1:
-                res = [
-                    res.snapshotItem(item)
-                    for item in range(res.snapshotLength)
-                ]
-                return (res)
-            else:
-                return (res.snapshotItem(index))
+            print('snapshotLength')
+            Snapshot(res._repl, res['uuid'])
+            return (res.snapshotItem(index))
+            # if index == -1:
+            #     res = [
+            #         res.snapshotItem(item)
+            #         for item in range(res.snapshotLength)
+            #     ]
+            #     return (res)
+            # else:
+            #     return (res.snapshotItem(index))
 
     def openUrl(self, url, wait=True):
         res = self.execute('{document}.location.href="{url}" '.format(
@@ -318,9 +321,21 @@ class Mozrepl(object):
             # .tagName.toLowerCase();
 
     def tabSetSelected(self, vTab=0):
-        return (self.execute(
-            "gBrowser.tabContainer.selectedIndex = {};".format(vTab)))
+        return (self.execute("gBrowser.tabContainer.selectedIndex = {};".format(vTab)))
         # .advanceSelectedTab( -1, true ) = prev
+
+    def tabCount(self, vTab=0):
+        return (self.execute("gBrowser.mTabs.length;".format(vTab)))
+
+    def tabAdd(self, url, select=False):
+        if select:
+            self.execute("gBrowser.selectedTab = gBrowser.addTab('{}')".format(url))
+        else:
+            self.execute("gBrowser.loadOneTab('{}',null,null,null,true)".format(url))
+
+    # def tabGetSelected(self, vTab=0):
+    #     return (self.execute("gBrowser.tabContainer.selectedIndex = {};".format(vTab)))
+    #     # .advanceSelectedTab( -1, true ) = prev
 
     def getElement(self, sElement, sMode='id', index=0, wait=False):
 
