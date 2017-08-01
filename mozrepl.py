@@ -246,36 +246,29 @@ class Mozrepl(object):
         if 'value' in respon:
             return respon['value']
 
-        print('tipo ', respon['type'])
-
         return FunctionNull()
         # return FunctionNull(self, 'no existe funcion')
         return None
 
-    def xpath(self, path, index):
+    def xpath(self, path, index=0, origin=None):
+        if not origin:
+            origin = self.document
         path = path.replace('"', '\\"')
         if index == 0:
+            # print(f'{self.document}.evaluate("{path}", {origin}, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue')
             return (self.execute(
-                '{document}.evaluate("{path}", {document}, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'.
-                format(
-                    document=self.document, path=path)))
+                f'{self.document}.evaluate("{path}", {origin}, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'))
 
         res = self.execute(
-            '{document}.evaluate("{path}", {document}, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)'.
-            format(
-                document=self.document, path=path))
-        if res and res.snapshotLength:
-            print('snapshotLength')
-            Snapshot(res._repl, res['uuid'])
-            return (res.snapshotItem(index))
-            # if index == -1:
-            #     res = [
-            #         res.snapshotItem(item)
-            #         for item in range(res.snapshotLength)
-            #     ]
-            #     return (res)
-            # else:
-            #     return (res.snapshotItem(index))
+            f'{self.document}.evaluate("{path}", {origin}, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)')
+
+        if index == -1:
+            res_snapshot = Snapshot(res._repl, res._uuid)
+            res_snapshot = [i for i in res_snapshot]
+            return res_snapshot
+        else:
+            return res_snapshot[index]
+
 
     def openUrl(self, url, wait=True):
         res = self.execute('{document}.location.href="{url}" '.format(
@@ -301,8 +294,7 @@ class Mozrepl(object):
     def waitLoad(self):
         # espera maximo 2 min a que cargue
         for i in range(10 * self.timeout_waitload):
-            if self.execute("window.getBrowser().webProgress.isLoadingDocument"
-                            ) == False:
+            if not self.execute("window.getBrowser().webProgress.isLoadingDocument"):
                 break
             print('.', end='')
             time.sleep(0.1)
@@ -365,10 +357,8 @@ class Mozrepl(object):
                 # if sMode == Else
                 #   ???
                 res = self.execute(sElement)
-
             if res or not wait or (wait and
-                                   (datetime.now() - startTime).total_seconds()
-                                   >= self.timeout_waitload):
+                                   (datetime.now() - startTime).total_seconds() >= self.timeout_waitload):
                 break
 
             time.sleep(0.02)

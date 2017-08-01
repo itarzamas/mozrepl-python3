@@ -46,10 +46,29 @@ class Array(Object):
         raise StopIteration
 
 
-class Snapshot(Array):
+class Snapshot(Object):
 
     def __init__(self, repl, uuid):
-        super(Array, self).__init__(repl, uuid)
+        super(Snapshot, self).__init__(repl, uuid)
+        # self._repl = res._repl
+        # self._uuid = res._uuid
 
     def __len__(self):
-        return self.snapshotLength
+        buffer = '{reference}.snapshotLength;'.format(
+            reference=self)
+        return self._repl.execute(buffer)
+        # return self.snapshotLength
+
+    def __iter__(self):
+        for index in range(len(self)):
+            buffer = '{reference}.snapshotItem({index});'.format(
+                reference=self,
+                index=index
+            )
+            yield self._repl.execute(buffer)
+        raise StopIteration
+
+    def __getitem__(self, index):
+        buffer = '{reference}.snapshotItem(index);'.format(
+            reference=self)
+        return self._repl.execute(buffer)
