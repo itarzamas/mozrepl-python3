@@ -330,7 +330,6 @@ class Mozrepl(object):
     #     # .advanceSelectedTab( -1, true ) = prev
 
     def getElement(self, sElement, sMode='id', index=0, wait=False):
-
         startTime = datetime.now()
         sMode = sMode.lower()
         res = None

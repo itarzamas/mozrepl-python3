@@ -47,7 +47,6 @@ class Array(Object):
 
 
 class Snapshot(Object):
-
     def __init__(self, repl, uuid):
         super(Snapshot, self).__init__(repl, uuid)
         # self._repl = res._repl
