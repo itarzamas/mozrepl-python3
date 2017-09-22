@@ -91,7 +91,7 @@ class Mozrepl(object):
             self.prompt = self._telnet.expect([self._RE_PROMPT], 2)[1].group(0)
             self._isConnected = True
         except Exception as e:
-            print(f'mozrepl connection error, details : {e}')
+            raise Exception(f'mozrepl connection error, details : {e}')
 
     def __repr__(self):
         return 'Mozrepl(port={port}, host={host})'.format(
