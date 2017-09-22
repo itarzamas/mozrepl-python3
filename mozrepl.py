@@ -86,9 +86,12 @@ class Mozrepl(object):
         if host is not None:
             self.host = host
 
-        self._telnet = telnetlib.Telnet(self.host, self.port)
-        self.prompt = self._telnet.expect([self._RE_PROMPT], 2)[1].group(0)
-        self._isConnected = True
+        try:
+            self._telnet = telnetlib.Telnet(self.host, self.port)
+            self.prompt = self._telnet.expect([self._RE_PROMPT], 2)[1].group(0)
+            self._isConnected = True
+        except Exception as e:
+            print(f'mozrepl connection error, details : {e}')
 
     def __repr__(self):
         return 'Mozrepl(port={port}, host={host})'.format(
@@ -268,7 +271,6 @@ class Mozrepl(object):
             return res_snapshot
         else:
             return res_snapshot[index]
-
 
     def openUrl(self, url, wait=True):
         res = self.execute('{document}.location.href="{url}" '.format(
