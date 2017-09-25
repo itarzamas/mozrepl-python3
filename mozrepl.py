@@ -265,12 +265,13 @@ class Mozrepl(object):
         res = self.execute(
             f'{self.document}.evaluate("{path}", {origin}, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)')
 
-        if index == -1:
-            res_snapshot = Snapshot(res._repl, res._uuid)
-            res_snapshot = [i for i in res_snapshot]
-            return res_snapshot
-        else:
-            return res_snapshot[index]
+        if res:
+            if index == -1:
+                res_snapshot = Snapshot(res._repl, res._uuid)
+                res_snapshot = [i for i in res_snapshot]
+                return res_snapshot
+            else:
+                return res_snapshot[index]
 
     def openUrl(self, url, wait=True):
         res = self.execute('{document}.location.href="{url}" '.format(
